@@ -3,11 +3,12 @@ Handles common functions for data ingestion
 """
 
 import requests
-from typing import List
+from typing import List, Dict
+from loguru import logger
 
 class Common:
     def __init__(self):
-        pass
+        self.logger = logger
 
     def get_nfl_team_metadata(self, year: str) -> List[str]:
         """
@@ -36,3 +37,28 @@ class Common:
             print(f'Encountered a problem - {e}')
         
         return ret
+
+
+    def generic_http_request(self, url: str) -> Dict:
+        """
+        Generic http request for use in many api sources
+
+        Args:
+            url: str - url to make the request to
+        
+        Returns:
+            Dict - dictionary of data from json response
+        """
+        try:
+            resp = requests.get(url)
+            resp.raise_for_status()
+
+            data = resp.json()
+
+        except Exception as e:
+            logger.warning(f'Problem making http request to url {url} - {e}')
+
+        return data
+    
+    def parse_team_string_for_id(self, team_string: str) -> str:
+        return team_string.split('/')[-1].split('?')[0]
