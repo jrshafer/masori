@@ -1,0 +1,18 @@
+[project]
+name = "masori"
+version = "0.1.0"
+description = "Default template for PDM package"
+authors = [
+    {name = "James", email = "jrshafer514@gmail.com"},
+]
+dependencies = ["ruff>=0.11.8", "requests>=2.32.3", "loguru>=0.7.3", "psycopg2-binary>=2.9.10", "dotenv>=0.9.9"]
+requires-python = "==3.13.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[tool.pdm]
+distribution = false
+
+[tool.pdm.scripts]
+masori = { call = "masori.__main__:app" }
