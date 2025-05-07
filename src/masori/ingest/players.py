@@ -77,25 +77,3 @@ class Players:
         }
 
         return ret
-
-
-players = Players()
-
-data = []
-count = 0
-
-raw = players.get_espn_roster_by_team('4')
-
-athletes = raw.get('athletes')
-
-for group in athletes:
-    for player in group.get('items', []):
-        transformed = players.transform_espn_roster(player)
-        data.append(transformed)
-        # print(player, '\n\n')
-        count += 1
-
-        if count == 2:
-            break
-
-print(data)

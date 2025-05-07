@@ -4,20 +4,20 @@ Main entrypoint for the application
 
 import typer
 
-from masori.pipeline.teams import TeamPipelines
-from masori.pipeline.players import PlayerPipelines
+from masori.pipeline.players import PlayerPipelineRunner
+from masori.pipeline.teams import TeamPipelineRunner
 
 app = typer.Typer()
 
 @app.command()
 def teams():
-    tp = TeamPipelines()
-    tp.exec_team_reference_pipeline()
+    tp = TeamPipelineRunner()
+    tp.run()
 
 @app.command()
 def players():
-    pl = PlayerPipelines()
-    pl.exec_player_reference_pipeline()
+    pl = PlayerPipelineRunner()
+    pl.run()
 
 if __name__ == '__main__':
     app()

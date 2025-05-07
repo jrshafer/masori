@@ -194,7 +194,8 @@ class Database:
         """
 
         if not rows:
-            self.logger.warn('No rows to upsert')
+            self.logger.warning('No rows to upsert')
+            return
         
         with self.db_connection() as conn:
             with conn.cursor() as cur:
