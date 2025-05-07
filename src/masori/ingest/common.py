@@ -10,7 +10,7 @@ class Common:
     def __init__(self):
         self.logger = logger
 
-    def get_nfl_team_metadata(self, year: str) -> List[str]:
+    def get_nfl_team_ids(self, year: str) -> List[str]:
         """
         Scrapes espn api for teams in an NFL season and returns their ESPN API IDs
         
@@ -22,22 +22,24 @@ class Common:
         """
 
         url = f'https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/{year}/teams'
-        ret = []
-
-        try:
-            resp = requests.get(url)
-            resp.raise_for_status()
-            data = resp.json()
-
-            for entry in data.get("items", []):
-                id = entry["$ref"].split('/')[-1].split('?')[0]
-                ret.append(id)
-
-        except Exception as e:
-            print(f'Encountered a problem - {e}')
         
-        return ret
+        return self.generic_espn_api_metadata_request(
+            url=url
+        )
+    
+    def get_nfl_position_ids(self, year: str) -> List[str]:
+        """
+        Scrapes espn api for NFL positions and returns their ESPN API IDs
 
+        Returns:
+            list[str]: list of position IDs
+        """
+
+        url = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions?ignore={year}"
+
+        return self.generic_espn_api_metadata_request(
+            url=url
+        )
 
     def generic_http_request(self, url: str) -> Dict:
         """
@@ -60,5 +62,23 @@ class Common:
 
         return data
     
-    def parse_team_string_for_id(self, team_string: str) -> str:
-        return team_string.split('/')[-1].split('?')[0]
+    def parse_ref_string_for_id(self, ref_string: str) -> str:
+        return ref_string.split('/')[-1].split('?')[0]
+
+    def generic_espn_api_metadata_request(self, url: str, item_key: str="items",
+                                          dict_key: str="$ref") -> List[str]:
+        try:
+            resp = requests.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+
+            ret = []
+
+            for entry in data.get(item_key, []):
+                id = self.parse_ref_string_for_id(entry[dict_key])
+                ret.append(id)
+
+        except Exception as e:
+            logger.warning(f'Problem making http request to url {url} - {e}')
+
+        return ret

@@ -1,0 +1,30 @@
+"""
+Handles the ingestion pipelines for position related datasets
+"""
+
+import datetime
+
+from masori.ingest.common import Common
+from masori.ingest.positions import Positions
+from masori.pipeline.pipeline import GenericPipeline
+
+class PositionsPipelineRunner:
+    def __init__(self):
+        self.teams = Positions()
+        self.common = Common()
+
+    def run(self):
+        pipeline = GenericPipeline(
+            pipeline_name='reference data [positions]',
+            year = datetime.datetime.now().year,
+            database_name='nfl',
+            schema='reference',
+            table_name='positions',
+            partition_keys=['id'],
+            id_fetcher=self.common.get_nfl_position_ids,
+            extract_fn=self.teams.get_espn_positions,
+            data_slicer=lambda raw: [raw],
+            transform_fn=self.teams.transform_espn_positions
+        )
+
+        pipeline.run()

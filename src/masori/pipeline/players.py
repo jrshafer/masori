@@ -21,7 +21,7 @@ class PlayerPipelineRunner:
             schema='reference',
             table_name='players',
             partition_keys=['id'],
-            id_fetcher=self.common.get_nfl_team_metadata,
+            id_fetcher=self.common.get_nfl_team_ids,
             extract_fn=self.players.get_espn_roster_by_team,
             data_slicer=lambda raw: [
                 item for group in raw.get('athletes', []) for item in group.get('items', [])

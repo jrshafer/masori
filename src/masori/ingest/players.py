@@ -63,7 +63,7 @@ class Players:
         ret = {}
 
         team_ref = player.get('teams', [{}])[0].get('$ref')
-        team_id = self.common.parse_team_string_for_id(team_ref) if team_ref else None
+        team_id = self.common.parse_ref_string_for_id(team_ref) if team_ref else None
 
         ret = {
             'id': int(player['id']),
