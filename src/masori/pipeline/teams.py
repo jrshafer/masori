@@ -19,9 +19,9 @@ class TeamPipelineRunner:
             year = datetime.datetime.now().year,
             database_name='nfl',
             schema='reference',
-            table_name='teams_test',
+            table_name='teams',
             partition_keys=['id'],
-            id_fetcher=self.common.get_nfl_team_metadata,
+            id_fetcher=self.common.get_nfl_team_ids,
             extract_fn=self.teams.get_espn_teams,
             data_slicer=lambda raw: [raw.get('team')],
             transform_fn=self.teams.transform_espn_teams
