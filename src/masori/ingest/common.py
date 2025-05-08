@@ -35,7 +35,7 @@ class Common:
             list[str]: list of position IDs
         """
 
-        url = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions?ignore={year}"
+        url = f"https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions?limit=100&ignore={year}"
 
         return self.generic_espn_api_metadata_request(
             url=url
@@ -62,8 +62,15 @@ class Common:
 
         return data
     
-    def parse_ref_string_for_id(self, ref_string: str) -> str:
-        return ref_string.split('/')[-1].split('?')[0]
+    def parse_ref_string_for_id(self, ref_string: str) -> int:
+        """
+        
+        """
+        try:
+           return ref_string.split('/')[-1].split('?')[0]
+        except (ValueError, IndexError):
+            return None
+         
 
     def generic_espn_api_metadata_request(self, url: str, item_key: str="items",
                                           dict_key: str="$ref") -> List[str]:
@@ -82,3 +89,8 @@ class Common:
             logger.warning(f'Problem making http request to url {url} - {e}')
 
         return ret
+
+
+common = Common()
+
+print(common.parse_ref_string_for_id('http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/seasons/2024/teams/4?lang=en&region=us'))

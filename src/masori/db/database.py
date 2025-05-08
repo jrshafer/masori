@@ -4,7 +4,7 @@ Handles database-related functionality
 import string
 import secrets
 import psycopg2
-from typing import TypedDict, Optional, List, Dict
+from typing import TypedDict, Optional, List, Dict, Any
 from psycopg2 import OperationalError, connect, sql
 from datetime import datetime
 import loguru
@@ -174,8 +174,10 @@ class Database:
                 return "TIMESTAMP"
             except ValueError:
                 return "TEXT"
-        else:
+        elif value is not None:
             return "TEXT"
+        else:
+            return None
 
     def upsert_table(self, database: str, schema: str, table_name: str, 
                      rows: List[Dict], partition_keys: List[str]) -> None:
@@ -193,6 +195,9 @@ class Database:
             None
         """
 
+        print(f"\n\n Rows into db function: {rows} \n\n")
+
+
         if not rows:
             self.logger.warning('No rows to upsert')
             return
@@ -201,14 +206,23 @@ class Database:
             with conn.cursor() as cur:
 
                 first_row = rows[0]
+                second_row = rows[1]
                 columns_names = list(first_row.keys())
+                print(f"first_row: {first_row} \n\n")
+
+                print(f"inferred type: {[self.infer_postgres_type(first_row[col] if first_row[col] is not None else second_row[col]) for col in columns_names]} \n\n")
+                
+               
+
                 column_defs = [
                     sql.SQL("{} {}").format(
                         sql.Identifier(col),
-                        sql.SQL(self.infer_postgres_type(first_row[col]))
+                        sql.SQL(self.infer_postgres_type(first_row[col] if first_row[col] is not None else second_row[col]))
                         )
                     for col in columns_names
                 ]
+
+                print(f"column defs: {column_defs} \n\n")
                 if partition_keys:
                     pk_constraint = sql.SQL("PRIMARY KEY ({})").format(
                         sql.SQL(', ').join(map(sql.Identifier, partition_keys))
@@ -245,8 +259,50 @@ class Database:
                     )
                 
                 for row in rows:
-                    values = [str(row[col]) for col in columns_names]
+                    values = [row[col] for col in columns_names]
                     cur.execute(upsert_query, values)
                                        
             conn.commit()
             self.logger.info(f"Upsert complete for table {database}.{schema}.{table_name} with {len(rows)} rows updated.")
+
+    def get_unique_ids(self, schema: str, table: str, id_column: str) -> list[int]:
+        """
+        Fetch a list of unique IDs from a table given a column
+
+        Args:
+            schema: str - schema of table
+            table: str - table name
+            id_column: str - column to retrieve unique ids from 
+        
+        Returns:
+            List[Any]: list of IDs
+        """
+
+        with self.db_connection() as conn:
+            with conn.cursor() as cur:
+                query = sql.SQL("""
+                    SELECT 
+                        DISTINCT {}
+                    FROM
+                        {}
+                """
+                ).format(
+                    sql.Identifier(id_column),
+                    sql.Identifier(schema, table)
+                )
+                cur.execute(query)
+                
+                result = cur.fetchall()
+
+                if not result:
+                    self.logger.warning('Unique ID query returned no results.')
+                    return []
+
+                ids = []
+
+                for row in result:
+                    try:
+                        ids.append(int(row[0]))
+                    except Exception as e:
+                        continue
+                return ids

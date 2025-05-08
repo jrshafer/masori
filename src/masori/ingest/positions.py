@@ -49,24 +49,51 @@ class Positions:
 
         ret = {}
 
-        parent_pos_ref = position.get('parent', {}).get('$ref')
+        parent_pos_ref = position.get('parent', {}).get('$ref', 'NA')
 
         print(parent_pos_ref)
 
-        parent_id = self.common.parse_ref_string_for_id(parent_pos_ref) if parent_pos_ref else None
+        parent_id = self.common.parse_ref_string_for_id(parent_pos_ref) if parent_pos_ref != 'NA' else None
 
         ret = {
             'id': int(position['id']),
             's_position_name': str(position['name']),
             's_abbreviation': str(position['abbreviation']),
-            'id_parent_key': int(parent_id) if parent_id else None
+            'id_parent_key': int(parent_id) if parent_id is not None else None
         }
 
+        print(f"\n\n Return object: {ret} \n\n")
+
         return ret
+    
+    # def transform_espn_parent_positions(self, parent_position: Dict) -> Dict:
+    #     """
+    #     Transforms payload from https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/{team_id}
 
-# pos = Positions()
+    #     Schema is flexible - if addtl fields are needed, adjust in this function
 
-# raw = pos.get_espn_positions('1')
-# print(raw.get('parent')['$ref'])
+    #     Args:
+    #         team_data: str - raw string from api response
 
-# data = pos.transform_espn_positions(raw)
+    #     payload structure:
+    #         {
+    #             "$ref": "http://sports.core.api.espn.com/v2/sports/football/leagues/nfl/positions/70?lang=en&region=us",
+    #             "id": "70",
+    #             "name": "Offense",
+    #             "displayName": "Offense",
+    #             "abbreviation": "OFF",
+    #             "leaf": false
+    #         }
+    #     Returns:
+    #         Dict{} - key value pair of data in normalized format
+    #     """
+
+    #     ret = {}
+
+    #     ret = {
+    #         'id': int(parent_position['id']),
+    #         's_position_name': str(parent_position['name']),
+    #         's_abbreviation': str(parent_position['abbreviation'])
+    #     }
+
+    #     return ret
