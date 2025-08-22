@@ -5,7 +5,6 @@ Handles ingestion of NFL teams from ESPN api
 from typing import Dict
 from loguru import logger
 from masori.ingest.common import Common
-import json
 
 class Teams:
     def __init__(self):
