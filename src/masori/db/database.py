@@ -4,8 +4,9 @@ Handles database-related functionality
 import string
 import secrets
 import psycopg2
-from typing import TypedDict, Optional, List, Dict, Any
+from typing import TypedDict, Optional, List, Dict
 from psycopg2 import OperationalError, connect, sql
+from psycopg2.errors import InvalidSchemaName
 from datetime import datetime
 import loguru
 from contextlib import contextmanager
@@ -195,9 +196,6 @@ class Database:
             None
         """
 
-        print(f"\n\n Rows into db function: {rows} \n\n")
-
-
         if not rows:
             self.logger.warning('No rows to upsert')
             return
@@ -205,22 +203,39 @@ class Database:
         with self.db_connection() as conn:
             with conn.cursor() as cur:
 
-                first_row = rows[0]
-                second_row = rows[1]
-                columns_names = list(first_row.keys())
-                print(f"first_row: {first_row} \n\n")
+                schema_row = None
+                for row in rows:
+                    if any(val is not None for val in row.values()):
+                        schema_row = row
+                        break
 
-                print(f"inferred type: {[self.infer_postgres_type(first_row[col] if first_row[col] is not None else second_row[col]) for col in columns_names]} \n\n")
-                
-               
+                if schema_row is None:
+                    raise ValueError("No valid rows found to infer schema.")
+
+                for r in rows:
+                    for k, v in schema_row.items():
+                        if v is None and r.get(k) is not None:
+                            schema_row[k] = r[k]
+                            
+                column_names = list(schema_row.keys())
+
+                print(f"schema_row: {schema_row} \n\n")
+
+                inferred_types = [
+                    self.infer_postgres_type(schema_row[col])
+                    for col in column_names
+                ]
+
+                print(f"inferred types: {inferred_types} \n\n")
 
                 column_defs = [
                     sql.SQL("{} {}").format(
-                        sql.Identifier(col),
-                        sql.SQL(self.infer_postgres_type(first_row[col] if first_row[col] is not None else second_row[col]))
-                        )
-                    for col in columns_names
+                        sql.Identifier(name),
+                        sql.SQL(col_type)
+                    )
+                    for name, col_type in zip(column_names, inferred_types)
                 ]
+
 
                 print(f"column defs: {column_defs} \n\n")
                 if partition_keys:
@@ -235,14 +250,24 @@ class Database:
                     sql.SQL(", ").join(column_defs)
                 )
 
-                cur.execute(create_table_query)
+                try:
+                    cur.execute(create_table_query)
+                
+                except InvalidSchemaName:
+                    conn.rollback()
+                    self.logger.info(f"Schema {schema} doesn't exist - creating now.")
+                    create_schema_query = sql.SQL('CREATE SCHEMA IF NOT EXISTS {}').format(
+                        sql.Identifier(schema)
+                    )
+                    cur.execute(create_schema_query)
+                    cur.execute(create_table_query)
 
-                insert_cols = sql.SQL(', ').join(map(sql.Identifier, columns_names))
-                insert_vals = sql.SQL(', ').join(sql.Placeholder() * len(columns_names))
+                insert_cols = sql.SQL(', ').join(map(sql.Identifier, column_names))
+                insert_vals = sql.SQL(', ').join(sql.Placeholder() * len(column_names))
 
                 update_cols = [
                     sql.SQL("{} = EXCLUDED.{}").format(sql.Identifier(col), sql.Identifier(col))
-                    for col in columns_names if col not in partition_keys
+                    for col in column_names if col not in partition_keys
                 ]
 
                 upsert_query = sql.SQL("""
@@ -257,13 +282,19 @@ class Database:
                         sql.SQL(", ").join(map(sql.Identifier, partition_keys)),
                         sql.SQL(", ").join(update_cols)
                     )
-                
+                count = 0
                 for row in rows:
-                    values = [row[col] for col in columns_names]
-                    cur.execute(upsert_query, values)
+                    try:
+                        values = [row[col] for col in column_names]
+                        cur.execute(upsert_query, values)
+                        count += 1
+
+                    except Exception as e:
+                        self.logger.warning(f'Failed to upsert row: {row} - {e}')
+                        continue
                                        
             conn.commit()
-            self.logger.info(f"Upsert complete for table {database}.{schema}.{table_name} with {len(rows)} rows updated.")
+            self.logger.info(f"Upsert complete for table {database}.{schema}.{table_name} with {count} rows updated.")
 
     def get_unique_ids(self, schema: str, table: str, id_column: str) -> list[int]:
         """
@@ -275,7 +306,7 @@ class Database:
             id_column: str - column to retrieve unique ids from 
         
         Returns:
-            List[Any]: list of IDs
+            List[int]: list of IDs
         """
 
         with self.db_connection() as conn:

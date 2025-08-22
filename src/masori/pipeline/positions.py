@@ -29,26 +29,8 @@ class PositionsPipelineRunner:
             transform_fn=self.teams.transform_espn_positions
         )
 
-        # parent_positions = GenericPipeline(
-        #     pipeline_name='reference data [parent_positions]',
-        #     year = datetime.datetime.now().year,
-        #     database_name='nfl',
-        #     schema='reference',
-        #     table_name='parent_positions',
-        #     partition_keys=['id'],
-        #     id_fetcher=lambda ids: self.database.get_unique_ids(
-        #         'reference',
-        #         'positions',
-        #         'id_parent_key'
-        #     ),
-        #     extract_fn=self.teams.get_espn_positions,
-        #     data_slicer=lambda raw: [raw],
-        #     transform_fn=self.teams.transform_espn_parent_positions
-        # )
-
         pipelines = [
             positions, 
-            # parent_positions
         ]
 
         for pipeline in pipelines:

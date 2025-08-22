@@ -67,7 +67,7 @@ class Players:
 
         ret = {
             'id': int(player['id']),
-            's_first_name': str(player['lastName']),
+            's_first_name': str(player['firstName']),
             's_last_name': str(player['lastName']),
             's_full_name': str(player['fullName']),
             'id_team_key': int(team_id) if team_id else None,
