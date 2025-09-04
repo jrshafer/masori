@@ -337,3 +337,5 @@ class Database:
                     except Exception as e:
                         continue
                 return ids
+            
+db = Database()

@@ -227,20 +227,64 @@ class Common:
             return None
          
 
-    def generic_espn_api_metadata_request(self, url: str, item_key: str="items",
-                                          dict_key: str="$ref") -> List[str]:
-        try:
-            resp = requests.get(url)
-            resp.raise_for_status()
-            data = resp.json()
+    # def generic_espn_api_metadata_request(self, url: str, item_key: str="items",
+    #                                       dict_key: str="$ref") -> List[str]:
+    #     try:
+    #         resp = requests.get(url)
+    #         resp.raise_for_status()
+    #         data = resp.json()
 
-            ret = []
+    #         ret = []
 
-            for entry in data.get(item_key, []):
-                id = self.parse_ref_string_for_id(entry[dict_key])
-                ret.append(id)
+    #         for entry in data.get(item_key, []):
+    #             id = self.parse_ref_string_for_id(entry[dict_key])
+    #             ret.append(id)
 
-        except Exception as e:
-            logger.warning(f'Problem making http request to url {url} - {e}')
+    #     except Exception as e:
+    #         logger.warning(f'Problem making http request to url {url} - {e}')
 
-        return ret
+    #     return ret
+
+    def generic_espn_api_metadata_request(
+        self,
+        url: str,
+        item_key: str = "items",
+        dict_key: str = "$ref"
+    ) -> List[str]:
+        """
+        Fetches all items from a paginated ESPN API endpoint and returns a list of IDs.
+
+        Args:
+            url: Base ESPN API endpoint
+            item_key: Key in the JSON where items are stored (default: "items")
+            dict_key: Key in each item dict containing the reference URL (default: "$ref")
+
+        Returns:
+            List[str]: List of parsed IDs from all pages
+        """
+        all_ids = []
+        page = 1
+
+        while True:
+            paged_url = f"{url}?page={page}"
+            try:
+                resp = requests.get(paged_url)
+                resp.raise_for_status()
+                data = resp.json()
+            except Exception as e:
+                self.logger.warning(f"Problem fetching page {page} from {url}: {e}")
+                break
+
+            items = data.get(item_key, [])
+            for entry in items:
+                try:
+                    id = self.parse_ref_string_for_id(entry[dict_key])
+                    all_ids.append(id)
+                except KeyError:
+                    self.logger.warning(f"Missing expected key '{dict_key}' in entry: {entry}")
+
+            if page >= data.get("pageCount", 1):
+                break
+            page += 1
+
+        return all_ids
