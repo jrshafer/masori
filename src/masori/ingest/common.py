@@ -29,7 +29,7 @@ class Common:
         year = today.year
         season_start = datetime(year, 9, 4).date() 
         delta = (today - season_start).days
-        week = delta // 7 + 1
+        week = delta // 6 + 1
 
         if week < 1:
             return 1
@@ -288,3 +288,8 @@ class Common:
             page += 1
 
         return all_ids
+    
+
+common = Common()
+
+print(common.determine_nfl_week())
